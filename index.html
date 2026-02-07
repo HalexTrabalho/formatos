@@ -1,0 +1,257 @@
+import React, { useState, useMemo } from 'react';
+import { 
+  Search, 
+  FileText, 
+  Image as ImageIcon, 
+  Video, 
+  Music, 
+  Archive, 
+  Info, 
+  CheckCircle2, 
+  AlertCircle,
+  FileCode,
+  Download,
+  Share2
+} from 'lucide-react';
+
+// Dados dos arquivos baseados em categorias comuns de guias digitais
+const FILE_CATEGORIES = [
+  {
+    id: 'images',
+    title: 'Imagens e Design',
+    color: 'bg-pink-500',
+    hoverColor: 'hover:bg-pink-600',
+    icon: <ImageIcon size={24} />,
+    items: [
+      { name: 'JPEG/JPG', description: 'O padrão para fotografias. Possui compressão com perda de dados, ideal para web devido ao tamanho reduzido.', use: 'Fotos e redes sociais.' },
+      { name: 'PNG', description: 'Suporta transparência e compressão sem perda. Ideal para logos e elementos gráficos complexos.', use: 'Web e design gráfico.' },
+      { name: 'SVG', description: 'Formato vetorial baseado em XML. Pode ser redimensionado infinitamente sem perder qualidade.', use: 'Logos e ícones de sites.' },
+      { name: 'GIF', description: 'Limitado a 256 cores, mas suporta animações simples. Popular para memes e reações.', use: 'Animações rápidas.' },
+      { name: 'WebP', description: 'Formato moderno do Google que oferece compressão superior a JPEG e PNG.', use: 'Otimização de performance web.' },
+    ]
+  },
+  {
+    id: 'docs',
+    title: 'Documentos e Dados',
+    color: 'bg-indigo-500',
+    hoverColor: 'hover:bg-indigo-600',
+    icon: <FileText size={24} />,
+    items: [
+      { name: 'PDF', description: 'O padrão universal para documentos finais. Preserva a formatação em qualquer dispositivo.', use: 'E-books, contratos e impressões.' },
+      { name: 'DOCX', description: 'Formato padrão do Microsoft Word. Editável e amplamente aceito no mundo corporativo.', use: 'Redação de textos e relatórios.' },
+      { name: 'XLSX', description: 'Planilhas eletrônicas do Excel. Excelente para cálculos e gestão de dados.', use: 'Finanças e organização.' },
+      { name: 'PPTX', description: 'Apresentações de slides. Suporta multimídia e transições.', use: 'Palestras e reuniões.' },
+    ]
+  },
+  {
+    id: 'media',
+    title: 'Vídeo e Áudio',
+    color: 'bg-orange-500',
+    hoverColor: 'hover:bg-orange-600',
+    icon: <Video size={24} />,
+    items: [
+      { name: 'MP4', description: 'O formato de vídeo mais popular. Ótimo equilíbrio entre qualidade e tamanho de arquivo.', use: 'Streaming e YouTube.' },
+      { name: 'MOV', description: 'Formato de alta qualidade desenvolvido pela Apple. Comumente usado em edição profissional.', use: 'Edição de vídeo.' },
+      { name: 'MP3', description: 'Formato de áudio comprimido universalmente compatível.', use: 'Música e podcasts.' },
+      { name: 'WAV', description: 'Áudio sem perdas (lossless). Preserva cada detalhe da gravação original.', use: 'Produção musical profissional.' },
+    ]
+  },
+  {
+    id: 'tech',
+    title: 'Arquivos Técnicos',
+    color: 'bg-emerald-500',
+    hoverColor: 'hover:bg-emerald-600',
+    icon: <Archive size={24} />,
+    items: [
+      { name: 'ZIP', description: 'Agrupa vários arquivos em um só, reduzindo o tamanho total para facilitar o envio.', use: 'Backup e transferência.' },
+      { name: 'JSON', description: 'Formato leve para troca de dados entre sistemas. Fácil de ler por humanos e máquinas.', use: 'Desenvolvimento e APIs.' },
+      { name: 'HTML/CSS', description: 'A base da web moderna. Define estrutura e estilo das páginas.', use: 'Criação de sites.' },
+    ]
+  }
+];
+
+const CategoryCard = ({ category, onSelect, isSelected }) => (
+  <button 
+    onClick={() => onSelect(category.id)}
+    className={`flex items-center gap-3 p-4 rounded-2xl transition-all duration-300 transform hover:scale-105 ${
+      isSelected ? `${category.color} text-white shadow-lg` : 'bg-white text-gray-700 hover:bg-gray-50'
+    }`}
+  >
+    <div className={`${isSelected ? 'text-white' : 'text-gray-400'}`}>
+      {category.icon}
+    </div>
+    <span className="font-bold text-sm md:text-base">{category.title}</span>
+  </button>
+);
+
+const FileItem = ({ item, color }) => (
+  <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 group">
+    <div className="flex justify-between items-start mb-4">
+      <h3 className={`text-xl font-black ${color.replace('bg-', 'text-')} flex items-center gap-2 uppercase tracking-tighter`}>
+        <FileCode size={20} />
+        {item.name}
+      </h3>
+      <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded-full font-bold uppercase">Extensão</span>
+    </div>
+    <p className="text-gray-600 mb-4 leading-relaxed">
+      {item.description}
+    </p>
+    <div className="flex items-center gap-2 text-sm font-medium text-gray-400">
+      <CheckCircle2 size={16} className="text-emerald-500" />
+      <span className="text-gray-800">Uso Principal:</span>
+      <span className="italic">{item.use}</span>
+    </div>
+  </div>
+);
+
+export default function App() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+
+  const filteredCategories = useMemo(() => {
+    let base = selectedCategory === 'all' 
+      ? FILE_CATEGORIES 
+      : FILE_CATEGORIES.filter(c => c.id === selectedCategory);
+
+    if (searchTerm) {
+      return base.map(cat => ({
+        ...cat,
+        items: cat.items.filter(item => 
+          item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.description.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      })).filter(cat => cat.items.length > 0);
+    }
+    return base;
+  }, [selectedCategory, searchTerm]);
+
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] font-sans text-gray-900 selection:bg-purple-200">
+      {/* Background Decorativo */}
+      <div className="fixed top-0 left-0 w-full h-96 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 -z-10 rounded-b-[4rem] opacity-90 shadow-2xl"></div>
+      
+      {/* Header Section */}
+      <header className="pt-12 pb-24 px-6 text-center text-white">
+        <div className="max-w-4xl mx-auto">
+          <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-2 rounded-full mb-6 border border-white/30 animate-pulse">
+            <Info size={16} />
+            <span className="text-xs font-bold uppercase tracking-widest">Guia Completo de Formatos</span>
+          </div>
+          <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-4 drop-shadow-lg">
+            Guia de Tipos de <br/>
+            <span className="text-yellow-300">Arquivos Digital</span>
+          </h1>
+          <p className="text-lg md:text-xl text-white/90 font-medium max-w-2xl mx-auto leading-relaxed">
+            Nunca mais se perca entre extensões! Entenda para que serve cada formato e como usá-los com maestria.
+          </p>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-6 -mt-16 pb-20">
+        
+        {/* Search and Filters */}
+        <div className="bg-white p-6 rounded-[2.5rem] shadow-2xl mb-12 border border-gray-100">
+          <div className="flex flex-col md:flex-row gap-6">
+            <div className="relative flex-grow">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <input 
+                type="text"
+                placeholder="Buscar por tipo ou descrição..."
+                className="w-full pl-12 pr-4 py-4 rounded-2xl bg-gray-50 border-transparent focus:bg-white focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none text-lg"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+              <button 
+                onClick={() => setSelectedCategory('all')}
+                className={`px-6 py-4 rounded-2xl font-bold transition-all ${
+                  selectedCategory === 'all' 
+                    ? 'bg-black text-white' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Todos
+              </button>
+              {FILE_CATEGORIES.map(cat => (
+                <CategoryCard 
+                  key={cat.id} 
+                  category={cat} 
+                  isSelected={selectedCategory === cat.id}
+                  onSelect={setSelectedCategory}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Results Grid */}
+        <div className="space-y-16">
+          {filteredCategories.length > 0 ? (
+            filteredCategories.map(cat => (
+              <section key={cat.id} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className={`${cat.color} p-3 rounded-2xl text-white shadow-lg`}>
+                    {cat.icon}
+                  </div>
+                  <h2 className="text-3xl font-black text-gray-800 tracking-tight">{cat.title}</h2>
+                  <div className="h-[2px] bg-gray-200 flex-grow rounded-full ml-4 opacity-50"></div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {cat.items.map((item, idx) => (
+                    <FileItem key={idx} item={item} color={cat.color} />
+                  ))}
+                </div>
+              </section>
+            ))
+          ) : (
+            <div className="text-center py-20 bg-white rounded-[3rem] border-2 border-dashed border-gray-200">
+              <div className="flex justify-center mb-4 text-gray-300">
+                <AlertCircle size={64} />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-500 uppercase tracking-widest">Nenhum resultado encontrado</h2>
+              <p className="text-gray-400 mt-2">Tente buscar por termos diferentes ou selecione outra categoria.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Informational Footer Section */}
+        <div className="mt-24 grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-8 rounded-[3rem] text-white shadow-xl relative overflow-hidden group">
+            <div className="relative z-10">
+              <h4 className="text-2xl font-black mb-2 uppercase italic">Dica Rápida ⚡</h4>
+              <p className="font-medium opacity-90 leading-relaxed">
+                Vai imprimir? Sempre prefira <strong>PDF</strong> ou <strong>TIFF</strong>. <br/>
+                Para a web? O <strong>WebP</strong> e o <strong>SVG</strong> são os reis da velocidade hoje em dia.
+              </p>
+            </div>
+            <div className="absolute -right-8 -bottom-8 opacity-20 transform group-hover:rotate-12 transition-transform duration-500">
+              <Download size={160} />
+            </div>
+          </div>
+          <div className="bg-gradient-to-br from-purple-600 to-indigo-700 p-8 rounded-[3rem] text-white shadow-xl relative overflow-hidden group">
+            <div className="relative z-10">
+              <h4 className="text-2xl font-black mb-2 uppercase italic">Compartilhe este Guia!</h4>
+              <p className="font-medium opacity-90 leading-relaxed">
+                Ajude outros profissionais e estudantes a entenderem melhor o mundo digital. Salve este link nos seus favoritos!
+              </p>
+              <button className="mt-4 bg-white text-indigo-700 px-6 py-3 rounded-2xl font-bold text-sm hover:bg-yellow-300 hover:text-black transition-colors flex items-center gap-2">
+                <Share2 size={18} />
+                COPIAR LINK
+              </button>
+            </div>
+            <div className="absolute -right-8 -bottom-8 opacity-20 transform group-hover:-rotate-12 transition-transform duration-500">
+              <FileCode size={160} />
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <footer className="py-12 text-center text-gray-400 font-medium">
+        <p>© Halex System&reg</p>
+      </footer>
+    </div>
+  );
+}
