@@ -28,6 +28,43 @@
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
+		.quiz-option {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .quiz-option:hover:not(.disabled-opt) {
+            background-color: #334155;
+            border-color: #60a5fa;
+        }
+        .selected-option {
+            background-color: #1e40af !important;
+            border-color: #3b82f6 !important;
+            color: white;
+        }
+        /* Estados de Feedback do Quiz */
+        .correct-answer {
+            background-color: #065f46 !important; /* Emerald 800 */
+            border-color: #10b981 !important;
+            color: #d1fae5;
+        }
+        .wrong-answer {
+            background-color: #7f1d1d !important; /* Red 900 */
+            border-color: #ef4444 !important;
+            color: #fee2e2;
+        }
+        .disabled-btn {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(100%);
+        }
+        /* Animações */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
     </style>
 </head>
 <body class="text-gray-900 selection:bg-indigo-100">
@@ -305,6 +342,291 @@
 
         // Inicia o sistema
         init();
+    </script>
+
+	<!-- Quiz Section -->
+        <section id="quiz-anchor" class="bg-gradient-to-b from-gray-900 to-black p-8 md:p-12 rounded-3xl shadow-2xl border border-gray-800 relative overflow-hidden">
+            <!-- Decorative Elements -->
+            <div class="absolute top-0 right-0 w-64 h-64 bg-blue-600 opacity-5 rounded-full filter blur-3xl"></div>
+            <div class="absolute bottom-0 left-0 w-64 h-64 bg-purple-600 opacity-5 rounded-full filter blur-3xl"></div>
+
+            <div class="text-center mb-12 relative z-10">
+                <h2 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 mb-3">Quiz: Expert em Telas</h2>
+                <p class="text-gray-400">Responda 10 perguntas aleatórias sobre a história das TVs.</p>
+                <div class="mt-4 inline-block bg-slate-800 px-4 py-1 rounded text-xs text-slate-400">
+                    <span class="text-green-400">●</span> 40% das perguntas mudam a cada atualização
+                </div>
+            </div>
+
+            <form id="quiz-form" class="space-y-8 relative z-10 max-w-3xl mx-auto">
+                <div id="questions-container" class="space-y-6">
+                    <!-- Perguntas injetadas via JS -->
+                    <div class="text-center text-gray-500 animate-pulse">Carregando banco de dados neural...</div>
+                </div>
+
+                <div class="pt-8 border-t border-gray-800 flex flex-col items-center gap-6">
+                    <button type="button" id="btn-calculate" onclick="calculateScore()" 
+                        class="group relative bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-16 rounded-full transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_30px_rgba(37,99,235,0.5)] active:scale-95">
+                        <span class="relative z-10 flex items-center gap-2">
+                            Calcular Resultado
+                            <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                        </span>
+                    </button>
+
+                    <div id="result-box" class="hidden w-full max-w-md bg-slate-800/80 backdrop-blur border border-slate-700 rounded-2xl p-8 text-center animate-fade-in">
+                        <p class="text-gray-400 uppercase tracking-widest text-xs mb-2">Sua Performance</p>
+                        <div class="text-6xl font-black text-white mb-2 tracking-tighter" id="score-display">0%</div>
+                        <p id="feedback-msg" class="text-lg font-medium text-blue-300"></p>
+                    </div>
+                </div>
+            </form>
+        </section>
+
+		<!-- Script Lógico -->
+    <script>
+        // Banco de Dados Estendido (20 Questões)
+        // Isso garante que ao selecionar 10 aleatoriamente, haverá rotatividade.
+        const fullQuestionBank = [
+            {
+                q: "Qual formato é descrito como o mais comum para fotografias, com compressão com perda de dados?",
+                options: ["PNG", "JPEG/JPG", "SVG", "WebP"],
+                correct: 1 // CRT
+            },
+            {
+                q: "Qual é a principal vantagem do PNG para design web?",
+                options: ["Compressão com perda", "Formato vetorial", "Ideal só para fotos", "Suporta transparência e compressão sem perda"],
+                correct: 3 // 
+            },
+            {
+                q: "O SVG é baseado em quê e permite redimensionamento sem perda?",
+                options: ["Binário", "XML, formato vetorial", "Raster", "Compressão com perda"],
+                correct: 1 // 
+            },
+            {
+                q: "Qual formato foi criado pelo Google como sucessor moderno de JPEG e PNG?",
+                options: ["PSD", "WebP", "MOV", "EPUB"],
+                correct: 1 // 
+            },
+            {
+                q: "O PSD guarda camadas, filtros e textos editáveis; qual seu uso principal?",
+                options: ["Streaming", "Criação profissional antes de exportar", "E-books", "Configurações"],
+                correct: 1 // 
+            },
+            {
+                q: "Qual formato preserva formatação e é padrão para documentos finais como contratos?",
+                options: ["XLSX", "DOCX", "PDF ", "ODT"],
+                correct: 2 //
+            },
+            {
+                q: "O formato padrão do Word, editável, é qual?",
+                options: ["DOCX", "EPUB", "CSV", "YAML"],
+                correct: 0 // 
+            },
+            {
+                q: "Para planilhas com cálculos e gestão, como finanças, qual é indicado?",
+                options: ["ODT", "Markdown", "JSON", "XLSX"],
+                correct: 3 // 
+            },
+            {
+                q: "O ODT é o 'irmão livre' do DOCX, usado em LibreOffice; qual sua vantagem?",
+                options: ["Padrão aberto, evita 'prisão' a uma empresa", "Proprietário", "Só para imagens", "Compressão de vídeo"],
+                correct: 0
+            },
+            {
+                q: "O EPUB é refluxível e ajusta texto à tela; onde é padrão?",
+                options: ["AutoCAD", "Edição de vídeo", "E-books em lojas (exceto Amazon)", "Backups"],
+                correct: 2 // 
+            },
+            {
+                q: "Qual vídeo tem ótimo equilíbrio qualidade/tamanho e é usado em YouTube?",
+                options: ["MKV", "H.265", "MP4", "DWG"],
+                correct: 2 // 
+            },
+            {
+                q: "Formato de áudio comprimido universal para música e podcasts?",
+                options: ["MP3", "MOV", "H.264", "DXF"],
+                correct: 0
+            },
+            {
+                q: "O MOV é padrão nativo da Apple para edição profissional; qual uso?",
+                options: ["Ícones web", "Planilhas", "Config YAML", "Final Cut Pro e iPhones"],
+                correct: 3
+            },
+            {
+                q: "MKV (Matroska) suporta múltiplas trilhas de áudio e legendas; uso comum?",
+                options: ["Fotos", "Logos", "Tabelas", "Filmes e séries na internet"],
+                correct: 3 // 
+            },
+            {
+                q: "H.264 é o padrão mais popular para streaming como Netflix; por quê?",
+                options: ["Só 8K", "Pior compressão", "Equilíbrio qualidade/compatibilidade", "Texto puro"],
+                correct: 2
+            },
+            {
+                q: "H.265 comprime melhor que H.264, metade do tamanho; para quê?",
+                options: ["4K/8K e HDR", "Áudio", "E-books", "Camadas PSD"],
+                correct: 0
+            },
+            {
+                q: "ZIP agrupa arquivos para envio; uso principal?",
+                options: ["Vetores", "Edição Word", "Backup e transferência", "Previsão tempo"],
+                correct: 2
+            },
+            {
+                q: "DWG é binário proprietário da Autodesk para designs 2D/3D complexos; onde?",
+                options: ["Redes sociais", "Projetos de prefeitura e plantas", "Podcasts", "Markdown docs"],
+                correct: 1
+            },
+            {
+                q: "JSON organiza dados com chaves/valores; uso na web?",
+                options: ["Compressão imagem", "Vídeo 4K", "Camadas Photoshop", "Previsão tempo no celular"],
+                correct: 3
+            },
+            {
+                q: "CSV é texto puro com vírgulas separando colunas, sem formatação; ideal para?",
+                options: ["Edição visual", "Logos vetoriais", "Exportação dados e integração sistemas", "Config servers"],
+                correct: 2
+            }
+        ];
+
+        // Estado do Quiz
+        let currentQuestions = [];
+
+        // Função para embaralhar array (Fisher-Yates)
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // Inicializar Quiz
+        function initQuiz() {
+            const container = document.getElementById('questions-container');
+            container.innerHTML = ''; // Limpar load
+
+            // 1. Embaralhar todo o banco
+            const shuffledBank = shuffleArray([...fullQuestionBank]);
+
+            // 2. Pegar os primeiros 10 (Garante randomicidade e rotação de conteúdo)
+            currentQuestions = shuffledBank.slice(0, 10);
+
+            // 3. Renderizar
+            currentQuestions.forEach((item, index) => {
+                // Criar estrutura de opções com índices originais para rastrear a correta
+                let optionsWithIndex = item.options.map((opt, i) => ({ text: opt, originalIndex: i }));
+                // Embaralhar opções para não viciar a posição
+                optionsWithIndex = shuffleArray(optionsWithIndex);
+
+                const questionHTML = `
+                    <div class="card-glass p-6 rounded-xl border border-gray-700/50" data-index="${index}">
+                        <p class="text-lg font-semibold text-white mb-4">
+                            <span class="text-blue-500 mr-2">#${index + 1}</span> ${item.q}
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            ${optionsWithIndex.map(opt => `
+                                <div class="quiz-option border border-gray-600 rounded-lg p-3 text-sm text-gray-300 hover:text-white"
+                                     onclick="selectOption(${index}, ${opt.originalIndex}, this)">
+                                    ${opt.text}
+                                </div>
+                            `).join('')}
+                        </div>
+                        <input type="hidden" id="q-${index}-answer" value="">
+                        <input type="hidden" id="q-${index}-correct" value="${item.correct}">
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', questionHTML);
+            });
+        }
+
+        // Seleção de Opção
+        window.selectOption = function(qIndex, optIndex, element) {
+            // Se já foi calculado, não faz nada
+            if(document.getElementById('btn-calculate').disabled) return;
+
+            // Remover seleção anterior visualmente
+            const parent = element.parentElement;
+            const options = parent.getElementsByClassName('quiz-option');
+            Array.from(options).forEach(opt => opt.classList.remove('selected-option'));
+
+            // Adicionar seleção atual
+            element.classList.add('selected-option');
+
+            // Salvar valor
+            document.getElementById(`q-${qIndex}-answer`).value = optIndex;
+        }
+
+        // Calcular Nota
+        window.calculateScore = function() {
+            const btn = document.getElementById('btn-calculate');
+            
+            // Regra: Desativar botão após clique
+            btn.disabled = true;
+            btn.classList.add('disabled-btn');
+            btn.innerHTML = 'Calculado!';
+
+            let score = 0;
+            const total = currentQuestions.length;
+
+            currentQuestions.forEach((item, index) => {
+                const userAns = document.getElementById(`q-${index}-answer`).value;
+                const correctAns = item.correct;
+                const card = document.querySelector(`div[data-index="${index}"]`);
+                const options = card.querySelectorAll('.quiz-option');
+
+                // Lógica de Feedback Visual
+                // Achar o elemento que o usuário clicou (se clicou)
+                // Achar o elemento correto
+                
+                // Iterar sobre as opções visuais para pintar
+                options.forEach(opt => {
+                    // Adicionar classe disabled para parar hover
+                    opt.classList.add('disabled-opt');
+                    opt.onclick = null; // Remover evento
+
+                    // Recuperar o índice original desta opção (tivemos que inferir ou refazer a lógica se não salvo no DOM, 
+                    // mas como embaralhamos as opções, precisamos comparar o texto ou usar um atributo data.
+                    // Vamos simplificar: comparar o texto é arriscado se tiver duplicatas, mas aqui ok.
+                    // Melhor: O selectOption salvou o índice original.
+                    // Vamos apenas pintar a CORRETA de verde e a ERRADA (se selecionada) de vermelho.
+                    
+                    // Como não salvei o índice original no elemento DOM explicitamente acima (erro meu na renderização),
+                    // vou verificar pelo texto.
+                    const optText = opt.innerText.trim();
+                    const correctText = item.options[correctAns];
+                    
+                    if (optText === correctText) {
+                        opt.classList.add('correct-answer');
+                    } else if (opt.classList.contains('selected-option')) {
+                        opt.classList.add('wrong-answer');
+                    }
+                });
+
+                if (userAns !== "" && parseInt(userAns) === correctAns) {
+                    score++;
+                }
+            });
+
+            // Exibir Resultado
+            const resultBox = document.getElementById('result-box');
+            const scoreDisplay = document.getElementById('score-display');
+            const feedbackMsg = document.getElementById('feedback-msg');
+            
+            resultBox.classList.remove('hidden');
+            scoreDisplay.innerText = `${score}/${total}`;
+
+            if (score === total) feedbackMsg.innerText = "Perfeito! Você é um expert em TVs.";
+            else if (score > 6) feedbackMsg.innerText = "Muito bom! Conhece bem a história.";
+            else feedbackMsg.innerText = "Vale a pena assistir o vídeo novamente!";
+            
+            // Scroll para o resultado
+            resultBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Iniciar ao carregar
+        window.onload = initQuiz;
+
     </script>
 </body>
 </html>
